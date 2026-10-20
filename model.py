@@ -277,3 +277,52 @@ def forecast_recursive(model, last_window, steps):
 
     return torch.tensor(predictions, dtype=torch.float32)
 
+# Step 10 - make_seq2seq_windows
+import torch
+
+
+def make_seq2seq_windows(series, window, horizon):
+    """Construct sequence-to-sequence input and target tensors.
+
+    Parameters
+    ----------
+    series : array-like or torch.Tensor
+        1D time series.
+    window : int
+        Number of input time steps in each window.
+    horizon : int
+        Number of future steps to predict at every step inside the window.
+
+    Returns
+    -------
+    X : torch.Tensor
+        Float32 tensor of shape (n, window), where X[i] = series[i : i + window].
+    Y : torch.Tensor
+        Float32 tensor of shape (n, window, horizon), where
+        Y[i, t, h] = series[i + t + 1 + h].
+    """
+    s = torch.as_tensor(series, dtype=torch.float32).view(-1)
+    total_len = len(s)
+    n = total_len - window - horizon + 1
+
+    if n <= 0:
+        raise ValueError(
+            f"Series length ({total_len}) is too short for window ({window}) "
+            f"and horizon ({horizon}). Requires at least {window + horizon - 1} points."
+        )
+
+    # 1. Input windows: shape (n, window)
+    # unfold(dimension, size, step) creates sliding window slices
+    X = s[: n + window - 1].unfold(dimension=0, size=window, step=1)
+
+    # 2. Target windows: shape (n, window, horizon)
+    # At each time step t (0 <= t < window), target is the next `horizon` values:
+    # starting from index 1 up to end of the series.
+    # Total span for each target slice across `window` steps is (window + horizon - 1).
+    target_spans = s[1:].unfold(
+        dimension=0, size=window + horizon - 1, step=1
+    )[:n]
+    Y = target_spans.unfold(dimension=1, size=horizon, step=1)
+
+    return X.contiguous(), Y.contiguous()
+

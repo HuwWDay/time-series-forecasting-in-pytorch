@@ -19,6 +19,7 @@ python scaffold.py
 - [x] **7.** train_forecaster
 - [x] **8.** compare_forecasters
 - [x] **9.** forecast_recursive
+- [x] **10.** make_seq2seq_windows
 
 ---
 
