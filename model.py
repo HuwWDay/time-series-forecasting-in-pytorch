@@ -146,3 +146,23 @@ class LinearForecaster(nn.Module):
         # TODO: (batch,)
         return self.fc(x).squeeze(-1)
 
+# Step 6 - RNNForecaster
+class RNNForecaster(nn.Module):
+    def __init__(self, hidden=32, cell="rnn", n_features=1):
+        super().__init__()
+        # TODO: self.rnn (RNN/GRU/LSTM, batch_first) and self.head
+        if cell == "rnn":
+            self.rnn = nn.RNN(n_features, hidden, batch_first=True)
+        elif cell == "gru":
+            self.rnn = nn.GRU(n_features, hidden, batch_first=True)
+        elif cell == "lstm":
+            self.rnn = nn.LSTM(n_features, hidden, batch_first=True)
+        self.head = nn.Linear(hidden, 1)
+
+    def forward(self, x):
+        # TODO: add feature axis if needed; last-step output -> head -> (batch,)
+        if x.dim() ==2:
+            x = x.unsqueeze(-1)
+        out, _ = self.rnn(x)
+        return self.head(out[:, -1]).squeeze(-1)
+
