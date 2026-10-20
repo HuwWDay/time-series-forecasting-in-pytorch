@@ -106,3 +106,13 @@ def select_range(data, start, end):
 
     return selected_dates, np.asarray(selected_rail, dtype=np.float64)
 
+# Step 3 - naive_mae
+def naive_mae(series, lag):
+    # TODO: MAE of the lag-day naive forecast
+    return np.abs(series[lag:] - series[:-lag]).mean()
+
+def mae(pred, target):
+    # TODO: mean absolute error as a float (accept arrays or tensors)
+    pred, target = np.asarray(pred), np.asarray(target)
+    return np.abs(pred-target).mean()
+
