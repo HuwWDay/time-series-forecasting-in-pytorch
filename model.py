@@ -157,6 +157,8 @@ class RNNForecaster(nn.Module):
             self.rnn = nn.GRU(n_features, hidden, batch_first=True)
         elif cell == "lstm":
             self.rnn = nn.LSTM(n_features, hidden, batch_first=True)
+        else:
+            raise ValueError
         self.head = nn.Linear(hidden, 1)
 
     def forward(self, x):
