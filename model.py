@@ -326,3 +326,18 @@ def make_seq2seq_windows(series, window, horizon):
 
     return X.contiguous(), Y.contiguous()
 
+# Step 11 - Seq2SeqForecaster
+class Seq2SeqForecaster(nn.Module):
+    def __init__(self, hidden=32, horizon=14, n_features=1):
+        super().__init__()
+        # TODO: LSTM + Linear(hidden, horizon)
+        self.rnn = nn.LSTM(n_features, hidden, batch_first=True)
+        self.head = nn.Linear(hidden, horizon)
+
+    def forward(self, x):
+        # TODO: (batch, window, horizon)
+        if x.dim() == 2:
+            x = x.unsqueeze(-1)
+        out, _ = self.rnn(x)
+        return self.head(out)
+
