@@ -18,6 +18,7 @@ python scaffold.py
 - [x] **6.** RNNForecaster
 - [x] **7.** train_forecaster
 - [x] **8.** compare_forecasters
+- [x] **9.** forecast_recursive
 
 ---
 

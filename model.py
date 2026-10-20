@@ -236,3 +236,44 @@ def compare_forecasters(train_series, val_series, window=56, epochs=20, seed=42)
     out["naive_7"] = naive_mae(train_series, 7)
     return out
 
+# Step 9 - forecast_recursive
+import torch
+
+
+def forecast_recursive(model, last_window, steps):
+    """Autoregressively roll a one-step forecasting model forward.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Trained model expecting input shape (batch_size, window_size)
+        or (batch_size, window_size, 1).
+    last_window : torch.Tensor
+        1D tensor of shape (window_size,) containing the most recent history.
+    steps : int
+        Number of steps into the future to forecast.
+
+    Returns
+    -------
+    torch.Tensor
+        1D float32 tensor of shape (steps,) containing the predictions.
+    """
+    model.eval()
+
+    # Ensure 1D float32 clone to avoid mutating input history
+    window = torch.as_tensor(last_window, dtype=torch.float32).clone().view(-1)
+    predictions = []
+
+    with torch.no_grad():
+        for _ in range(steps):
+            # Pass (1, window) into model, squeeze output to scalar
+            pred = model(window.unsqueeze(0)).squeeze()
+
+            # Record prediction
+            predictions.append(pred.item())
+
+            # Shift window left and append the latest forecast at the end
+            window = torch.cat([window[1:], pred.view(1)])
+
+    return torch.tensor(predictions, dtype=torch.float32)
+
