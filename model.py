@@ -168,3 +168,55 @@ class RNNForecaster(nn.Module):
         out, _ = self.rnn(x)
         return self.head(out[:, -1]).squeeze(-1)
 
+# Step 7 - train_forecaster
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+
+def train_forecaster(
+    model,
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    epochs=20,
+    lr=0.01,
+    batch_size=32,
+    seed=42,
+):
+    # Set seed for reproducible training
+    torch.manual_seed(seed)
+
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    mse_loss_fn = nn.MSELoss()
+    mae_loss_fn = nn.L1Loss()
+
+    n_samples = len(X_train)
+    history = {"val_mae": []}
+
+    for epoch in range(epochs):
+        # 1. Training mode & epoch-level shuffle
+        model.train()
+        perm = torch.randperm(n_samples)
+
+        for start_idx in range(0, n_samples, batch_size):
+            batch_indices = perm[start_idx : start_idx + batch_size]
+            X_batch = X_train[batch_indices]
+            y_batch = y_train[batch_indices]
+
+            optimizer.zero_grad()
+            predictions = model(X_batch)
+            loss = mse_loss_fn(predictions.squeeze(-1), y_batch)
+            loss.backward()
+            optimizer.step()
+
+        # 2. Validation mode (no gradient computation)
+        model.eval()
+        with torch.no_grad():
+            val_preds = model(X_val)
+            val_mae = mae_loss_fn(val_preds.squeeze(-1), y_val).item()
+            history["val_mae"].append(val_mae)
+
+    return history
+

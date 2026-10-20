@@ -16,6 +16,7 @@ python scaffold.py
 - [x] **4.** make_windows
 - [x] **5.** LinearForecaster
 - [x] **6.** RNNForecaster
+- [x] **7.** train_forecaster
 
 ---
 
