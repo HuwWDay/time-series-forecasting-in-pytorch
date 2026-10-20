@@ -64,3 +64,45 @@ def load_ridership():
         "rail": np.array([r["rail"] for r in records], dtype=np.float64),
     }
 
+# Step 2 - select_range
+import bisect
+import numpy as np
+
+
+def select_range(data, start, end):
+    """Cut the rail series between two ISO dates (inclusive) and rescale to millions.
+
+    Parameters
+    ----------
+    data : dict
+        Dictionary returned by load_ridership() with 'dates' and 'rail'.
+    start : str
+        Start date in ISO format (YYYY-MM-DD), inclusive.
+    end : str
+        End date in ISO format (YYYY-MM-DD), inclusive.
+
+    Returns
+    -------
+    tuple of (list, np.ndarray)
+        (dates, values) where values is rail boardings divided by 1e6.
+
+    Raises
+    ------
+    ValueError
+        If no dates fall within the range [start, end].
+    """
+    dates = data["dates"]
+
+    # Since ISO strings are lexicographically sorted, binary search yields O(log N) slicing
+    i = bisect.bisect_left(dates, start)
+    j = bisect.bisect_right(dates, end)
+
+    selected_dates = dates[i:j]
+
+    if not selected_dates:
+        raise ValueError(f"No records found for range: {start} to {end}")
+
+    selected_rail = data["rail"][i:j] / 1e6
+
+    return selected_dates, np.asarray(selected_rail, dtype=np.float64)
+

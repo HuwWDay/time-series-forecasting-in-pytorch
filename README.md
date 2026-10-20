@@ -11,6 +11,7 @@ python scaffold.py
 ## Steps
 
 - [x] **1.** load_ridership
+- [x] **2.** select_range
 
 ---
 
