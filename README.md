@@ -13,6 +13,7 @@ python scaffold.py
 - [x] **1.** load_ridership
 - [x] **2.** select_range
 - [x] **3.** naive_mae
+- [x] **4.** make_windows
 
 ---
 

@@ -116,3 +116,22 @@ def mae(pred, target):
     pred, target = np.asarray(pred), np.asarray(target)
     return np.abs(pred-target).mean()
 
+# Step 4 - make_windows
+import torch
+
+
+def make_windows(series, window):
+    series = torch.as_tensor(series, dtype=torch.float32)
+    n = len(series) - window
+    if n <= 0:
+        raise ValueError(
+            f"Series length ({len(series)}) must be greater than window size ({window})."
+        )
+
+    # unfold(dimension, size, step) creates sliding windows with zero-copy views
+    windows = series.unfold(dimension=0, size=window + 1, step=1)
+    X = windows[:, :window]
+    y = windows[:, -1]
+
+    return X, y
+
