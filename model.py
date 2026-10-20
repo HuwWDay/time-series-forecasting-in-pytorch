@@ -135,3 +135,14 @@ def make_windows(series, window):
 
     return X, y
 
+# Step 5 - LinearForecaster
+class LinearForecaster(nn.Module):
+    def __init__(self, window):
+        super().__init__()
+        # TODO
+        self.fc = nn.Linear(window, 1)
+
+    def forward(self, x):
+        # TODO: (batch,)
+        return self.fc(x).squeeze(-1)
+

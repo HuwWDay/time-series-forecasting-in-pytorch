@@ -14,6 +14,7 @@ python scaffold.py
 - [x] **2.** select_range
 - [x] **3.** naive_mae
 - [x] **4.** make_windows
+- [x] **5.** LinearForecaster
 
 ---
 
