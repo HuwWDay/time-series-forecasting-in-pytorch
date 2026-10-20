@@ -1,0 +1,66 @@
+"""
+Time-Series Forecasting in PyTorch
+
+Assembled from your step-by-step solutions.
+"""
+
+import numpy as np
+
+# Step 1 - load_ridership
+import csv
+from datetime import datetime
+from pathlib import Path
+import tarfile
+import tempfile
+import urllib.request
+import numpy as np
+
+
+def load_ridership():
+    url = "https://github.com/ageron/data/raw/main/ridership.tgz"
+    cache_path = Path(tempfile.gettempdir()) / "ridership.tgz"
+
+    # 1. Cached tgz download
+    if not cache_path.exists():
+        urllib.request.urlretrieve(url, cache_path)
+
+    # 2. Extract and parse the CSV inside the tar archive
+    records = []
+    seen_dates = set()
+
+    with tarfile.open(cache_path, "r:gz") as tar:
+        # Locate the CSV file inside the tarball
+        csv_member = next(
+            m for m in tar.getmembers() if m.name.endswith(".csv")
+        )
+        csv_file = tar.extractfile(csv_member)
+        text_stream = (line.decode("utf-8") for line in csv_file)
+        reader = csv.DictReader(text_stream)
+
+        for row in reader:
+            # 3. Convert service_date (MM/DD/YYYY) to ISO (YYYY-MM-DD)
+            iso_date = datetime.strptime(
+                row["service_date"], "%m/%d/%Y"
+            ).strftime("%Y-%m-%d")
+
+            # 4. Deduplicate dates, keeping the first occurrence
+            if iso_date not in seen_dates:
+                seen_dates.add(iso_date)
+                records.append({
+                    "date": iso_date,
+                    "day_type": row["day_type"],
+                    "bus": float(row["bus"]),
+                    "rail": float(row["rail_boardings"]),
+                })
+
+    # 5. Sort chronologically by ISO date
+    records.sort(key=lambda r: r["date"])
+
+    # 6. Format output dictionary
+    return {
+        "dates": [r["date"] for r in records],
+        "day_type": [r["day_type"] for r in records],
+        "bus": np.array([r["bus"] for r in records], dtype=np.float64),
+        "rail": np.array([r["rail"] for r in records], dtype=np.float64),
+    }
+
