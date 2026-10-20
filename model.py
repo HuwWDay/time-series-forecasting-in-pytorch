@@ -220,3 +220,19 @@ def train_forecaster(
 
     return history
 
+# Step 8 - compare_forecasters
+def compare_forecasters(train_series, val_series, window=56, epochs=20, seed=42):
+    # TODO: windows once; naive_1/naive_7; linear, rnn, gru, lstm trained identically; MAE dict.
+    torch.manual_seed(seed)
+    X_train, y_train = make_windows(train_series, window)
+    X_val, y_val = make_windows(val_series, window)
+    
+    out = {}
+    out["linear"] = train_forecaster(LinearForecaster(window=window), X_train, y_train, X_val, y_val, epochs=epochs, seed=seed)["val_mae"][-1]
+    out["rnn"] = train_forecaster(RNNForecaster(), X_train, y_train, X_val, y_val, epochs=epochs, seed=seed)["val_mae"][-1]
+    out["gru"] = train_forecaster(RNNForecaster(cell="gru"), X_train, y_train, X_val, y_val, epochs=epochs, seed=seed)["val_mae"][-1]
+    out["lstm"] = train_forecaster(RNNForecaster(cell="lstm"), X_train, y_train, X_val, y_val, epochs=epochs, seed=seed)["val_mae"][-1]
+    out["naive_1"] = naive_mae(train_series, 1)
+    out["naive_7"] = naive_mae(train_series, 7)
+    return out
+
