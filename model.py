@@ -422,3 +422,84 @@ def train_seq2seq(
 
     return per_horizon_mae
 
+# Step 13 - feature_matrix
+import bisect
+import numpy as np
+import torch
+
+
+def feature_matrix(data, start, end):
+    """Build a multivariate daily feature table for the ISO date range (inclusive).
+
+    Columns: [rail / 1e6, bus / 1e6, is_W, is_A, is_U]
+
+    Parameters
+    ----------
+    data : dict
+        Dict containing 'dates', 'day_type', 'bus', and 'rail'.
+    start : str
+        Start date in ISO format (YYYY-MM-DD), inclusive.
+    end : str
+        End date in ISO format (YYYY-MM-DD), inclusive.
+
+    Returns
+    -------
+    np.ndarray
+        Array of shape (n, 5) with dtype np.float64.
+    """
+    dates = data["dates"]
+    i = bisect.bisect_left(dates, start)
+    j = bisect.bisect_right(dates, end)
+
+    if i >= j:
+        raise ValueError(f"No records found for range: {start} to {end}")
+
+    # Slice components across the selected range
+    rail_slice = data["rail"][i:j] / 1e6
+    bus_slice = data["bus"][i:j] / 1e6
+    day_types = np.array(data["day_type"][i:j])
+
+    # One-hot encode day_type ('W' = Weekday, 'A' = Saturday, 'U' = Sunday/Holiday)
+    is_w = (day_types == "W").astype(np.float64)
+    is_a = (day_types == "A").astype(np.float64)
+    is_u = (day_types == "U").astype(np.float64)
+
+    # Stack columns to shape (n, 5)
+    return np.column_stack([rail_slice, bus_slice, is_w, is_a, is_u]).astype(
+        np.float64
+    )
+
+
+def make_multivariate_windows(feats, window):
+    """Construct multivariate sliding windows for one-step-ahead rail forecasting.
+
+    Parameters
+    ----------
+    feats : np.ndarray or torch.Tensor
+        Array of shape (n_days, 5).
+    window : int
+        Window size (number of past days).
+
+    Returns
+    -------
+    X : torch.Tensor
+        Float32 tensor of shape (n, window, 5).
+    y : torch.Tensor
+        Float32 tensor of shape (n,) containing next-day rail values (column 0).
+    """
+    feats = np.asarray(feats, dtype=np.float32)
+    n = len(feats) - window
+    if n <= 0:
+        raise ValueError(
+            f"Series length ({len(feats)}) must be greater than window size ({window})."
+        )
+
+    X = np.empty((n, window, feats.shape[1]), dtype=np.float32)
+    y = np.empty(n, dtype=np.float32)
+
+    for i in range(n):
+        X[i] = feats[i : i + window]
+        y[i] = feats[i + window, 0]  # Target is next-day rail (col 0)
+
+    return torch.from_numpy(X), torch.from_numpy(y)
+

@@ -22,6 +22,7 @@ python scaffold.py
 - [x] **10.** make_seq2seq_windows
 - [x] **11.** Seq2SeqForecaster
 - [x] **12.** train_seq2seq
+- [x] **13.** feature_matrix
 
 ---
 
