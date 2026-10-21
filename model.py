@@ -341,3 +341,84 @@ class Seq2SeqForecaster(nn.Module):
         out, _ = self.rnn(x)
         return self.head(out)
 
+# Step 12 - train_seq2seq
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
+
+
+def train_seq2seq(
+    model, X, Y, X_val, Y_val, epochs=20, lr=0.01, batch_size=32, seed=42
+):
+    """Train a sequence-to-sequence model using MSE over all sequence steps,
+
+    and evaluate the per-horizon MAE at the final time step on the validation
+    set.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Seq2Seq model outputting predictions of shape (batch, window, horizon).
+    X : torch.Tensor
+        Training inputs of shape (n_train, window).
+    Y : torch.Tensor
+        Training targets of shape (n_train, window, horizon).
+    X_val : torch.Tensor
+        Validation inputs of shape (n_val, window).
+    Y_val : torch.Tensor
+        Validation targets of shape (n_val, window, horizon).
+    epochs : int, default=20
+        Number of full passes over the training set.
+    lr : float, default=0.01
+        Learning rate for the Adam optimizer.
+    batch_size : int, default=32
+        Mini-batch size.
+    seed : int, default=42
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    list of float
+        Validation MAE for each horizon step h = 0, ..., horizon - 1,
+        evaluated solely on the last step of the window ([:, -1, h]).
+    """
+    torch.manual_seed(seed)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+
+    n_samples = len(X)
+
+    # 1. Training loop over all steps and horizons
+    for epoch in range(epochs):
+        model.train()
+        perm = torch.randperm(n_samples)
+
+        for start_idx in range(0, n_samples, batch_size):
+            batch_idx = perm[start_idx : start_idx + batch_size]
+            X_batch = X[batch_idx]
+            Y_batch = Y[batch_idx]
+
+            optimizer.zero_grad()
+            preds = model(X_batch)
+            loss = F.mse_loss(preds, Y_batch)
+            loss.backward()
+            optimizer.step()
+
+    # 2. Evaluation: score the last time step per horizon
+    model.eval()
+    with torch.no_grad():
+        val_preds = model(X_val)  # Shape: (n_val, window, horizon)
+
+        # Slice the last time step inside the window: shape (n_val, horizon)
+        val_preds_last = val_preds[:, -1, :]
+        Y_val_last = Y_val[:, -1, :]
+
+        # Compute mean absolute error across batches for each horizon step h
+        # abs_errors shape: (n_val, horizon) -> mean over dim 0 -> (horizon,)
+        per_horizon_mae = (
+            torch.mean(torch.abs(val_preds_last - Y_val_last), dim=0)
+            .cpu()
+            .tolist()
+        )
+
+    return per_horizon_mae
+
