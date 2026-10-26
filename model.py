@@ -639,3 +639,40 @@ def load_forecaster(path):
     model.eval()
     return model
 
+# Step 16 - forecast_next_days
+# ── Step 016  forecast_next_days ──
+import torch
+
+
+def forecast_next_days(model, recent_millions, n_days):
+    """Produce an integer ridership forecast for the next n_days.
+
+    Parameters
+    ----------
+    model : nn.Module
+        Trained forecasting model (LinearForecaster or recurrent model).
+    recent_millions : array-like
+        1-D array of recent daily rail values in millions of riders.
+    n_days : int
+        Number of days to forecast into the future.
+
+    Returns
+    -------
+    list of int
+        Predicted ridership as rounded integers for each of the next n_days.
+    """
+    # Determine window size based on model type
+    if isinstance(model, LinearForecaster):
+        window = model.fc.in_features
+    else:
+        window = len(recent_millions)
+
+    # Slice the last window values as a float32 tensor
+    last_window = torch.tensor(recent_millions[-window:], dtype=torch.float32)
+
+    # Autoregressively forecast forward n_days
+    preds = forecast_recursive(model, last_window, n_days)
+
+    # Rescale from millions to rounded Python integers
+    return [int(round(float(v) * 1_000_000)) for v in preds.tolist()]
+
