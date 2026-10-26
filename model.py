@@ -503,3 +503,80 @@ def make_multivariate_windows(feats, window):
 
     return torch.from_numpy(X), torch.from_numpy(y)
 
+# Step 14 - multivariate_vs_univariate
+# ── Step 014  multivariate_vs_univariate ──
+def multivariate_vs_univariate(data, window=56, epochs=20, seed=42):
+    """Compare univariate (rail only) vs multivariate (rail + bus + day_type) LSTM models.
+
+    Parameters
+    ----------
+    data : dict
+        Dataset dict returned by load_ridership().
+    window : int, default=56
+        Past observation window size.
+    epochs : int, default=20
+        Number of training epochs.
+    seed : int, default=42
+        Reproducibility seed.
+
+    Returns
+    -------
+    dict
+        {"univariate": mae, "multivariate": mae} validation MAE in millions of riders.
+    """
+    train_start, train_end = "2016-01-01", "2018-12-31"
+    val_start, val_end = "2019-01-01", "2019-05-31"
+
+    # 1. Prepare univariate rail series
+    _, rail_train = select_range(data, train_start, train_end)
+    _, rail_val = select_range(data, val_start, val_end)
+    rail_val_extended = np.concatenate([rail_train[-window:], rail_val])
+
+    X_train_uni, y_train_uni = make_windows(rail_train, window)
+    X_val_uni, y_val_uni = make_windows(rail_val_extended, window)
+
+    # 2. Prepare multivariate feature matrices
+    feats_train = feature_matrix(data, train_start, train_end)
+    feats_val = feature_matrix(data, val_start, val_end)
+    feats_val_extended = np.vstack([feats_train[-window:], feats_val])
+
+    X_train_multi, y_train_multi = make_multivariate_windows(
+        feats_train, window
+    )
+    X_val_multi, y_val_multi = make_multivariate_windows(
+        feats_val_extended, window
+    )
+
+    # 3. Train univariate LSTM
+    torch.manual_seed(seed)
+    uni_model = RNNForecaster(hidden=32, cell="lstm", n_features=1)
+    uni_history = train_forecaster(
+        uni_model,
+        X_train_uni,
+        y_train_uni,
+        X_val_uni,
+        y_val_uni,
+        epochs=epochs,
+        lr=0.01,
+        seed=seed,
+    )
+
+    # 4. Train multivariate LSTM
+    torch.manual_seed(seed)
+    multi_model = RNNForecaster(hidden=32, cell="lstm", n_features=5)
+    multi_history = train_forecaster(
+        multi_model,
+        X_train_multi,
+        y_train_multi,
+        X_val_multi,
+        y_val_multi,
+        epochs=epochs,
+        lr=0.01,
+        seed=seed,
+    )
+
+    return {
+        "univariate": float(uni_history["val_mae"][-1]),
+        "multivariate": float(multi_history["val_mae"][-1]),
+    }
+
