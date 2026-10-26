@@ -580,3 +580,62 @@ def multivariate_vs_univariate(data, window=56, epochs=20, seed=42):
         "multivariate": float(multi_history["val_mae"][-1]),
     }
 
+# Step 15 - save_forecaster
+# ── Step 015  save_forecaster ──
+def save_forecaster(model, config, path):
+    """Serialize the model state dictionary along with its construction metadata.
+
+    Parameters
+    ----------
+    model : nn.Module
+        The trained forecaster model.
+    config : dict
+        Configuration dictionary (e.g., {"kind": "rnn", "hidden": 32, "cell": "lstm"}).
+    path : str or Path
+        Destination file path.
+    """
+    checkpoint = {
+        "config": config,
+        "state_dict": model.state_dict(),
+    }
+    torch.save(checkpoint, path)
+
+
+def load_forecaster(path):
+    """Load model metadata and weights from disk, reconstructing the instance.
+
+    Parameters
+    ----------
+    path : str or Path
+        File path to the serialized checkpoint.
+
+    Returns
+    -------
+    nn.Module
+        Reconstructed model loaded with the saved weights and set to eval mode.
+    """
+    checkpoint = torch.load(path, weights_only=False)
+    config = checkpoint["config"]
+
+    kind = config.get("kind", "rnn")
+    if kind == "linear":
+        model = LinearForecaster(window=config["window"])
+    elif kind == "rnn":
+        model = RNNForecaster(
+            hidden=config.get("hidden", 32),
+            cell=config.get("cell", "rnn"),
+            n_features=config.get("n_features", 1),
+        )
+    elif kind == "seq2seq":
+        model = Seq2SeqForecaster(
+            hidden=config.get("hidden", 32),
+            horizon=config.get("horizon", 14),
+            n_features=config.get("n_features", 1),
+        )
+    else:
+        raise ValueError(f"Unknown model kind: {kind}")
+
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    return model
+

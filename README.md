@@ -24,6 +24,7 @@ python scaffold.py
 - [x] **12.** train_seq2seq
 - [x] **13.** feature_matrix
 - [x] **14.** multivariate_vs_univariate
+- [x] **15.** save_forecaster
 
 ---
 
